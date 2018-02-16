@@ -5,7 +5,7 @@ set ( IMAGE_NAME ${PROJECT_NAME}/worker )
 
 
 add_custom_target (
-    docker-image
+    worker-image ALL
     COMMAND docker build --tag ${IMAGE_NAME}:${VERSION} --file Dockerfile .
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
