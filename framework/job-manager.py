@@ -715,8 +715,8 @@ def mesos_framework(cfg):
     framework = MesosPb2.FrameworkInfo()
     framework.user = cfg.mesos.user
     framework.name = cfg.mesos.framework_name
-    framework.principal = cfg.mesos.principal
-    framework.role = cfg.mesos.role
+    #framework.principal = cfg.mesos.principal
+    #framework.role = cfg.mesos.role
 
     return framework
 
@@ -783,12 +783,14 @@ def main():
     setup_logging(cfg)
 
     framework = mesos_framework(cfg)
-    credentials = mesos_credentials(cfg)
+    #credentials = mesos_credentials(cfg)
 
     mesos_scheduler = OurJobScheduler(os.getpid(), cfg)
+    #driver = MesosSchedulerDriver(mesos_scheduler, framework,
+    #                              cfg.mesos.master, cfg.mesos.imp_ack,
+    #                              credentials)
     driver = MesosSchedulerDriver(mesos_scheduler, framework,
-                                  cfg.mesos.master, cfg.mesos.imp_ack,
-                                  credentials)
+                                  cfg.mesos.master, cfg.mesos.imp_ack)
 
     shutdown = Shutdown()
 
