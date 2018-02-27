@@ -12,4 +12,5 @@ set ( VERSION ${${PROJECT_NAME}_VERSION_MAJOR}.${${PROJECT_NAME}_VERSION_MINOR}.
 
 
 add_subdirectory ( job-manager )
+add_subdirectory ( work-manager )
 add_subdirectory ( worker )
