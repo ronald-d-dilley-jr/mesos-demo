@@ -101,10 +101,10 @@ def retrieve_command_line():
     parser = ArgumentParser(description=description)
 
     parser.add_argument('--starting-job-number',
-                        action='store_true',
+                        action='store',
                         dest='starting_job_number',
                         required=False,
-                        default=False,
+                        default=1,
                         help='Start incrementing from this number')
 
     parser.add_argument('--debug',
@@ -821,6 +821,9 @@ def main():
                 sleep(5)
 
             break
+
+        if cfg.debug > 0:
+            logger.debug('Thread Alive')
 
         # If there's no new work to be done or the max number of jobs are
         # already running, suppress offers and wait for some jobs to finish.
