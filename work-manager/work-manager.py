@@ -11,19 +11,20 @@ import os
 import sys
 import json
 import logging
+import random
+import time
 from argparse import ArgumentParser
-from time import sleep
 
 
 import pika
 
 
 logger = None
-SYSTEM = 'PROTO'
+SYSTEM = 'MESOS_DEMO'
 COMPONENT = 'work-manager'
 
 
-MSG_SERVICE_STRING = None
+MSG_SERVICE_CONNECTION_STRING = None
 MSG_WORK_QUEUE = None
 MSG_STATUS_QUEUE = None
 
@@ -108,13 +109,6 @@ def retrieve_command_line():
     description = 'Prototype Work Manager'
     parser = ArgumentParser(description=description)
 
-    parser.add_argument('--job-filename',
-                        action='store',
-                        dest='job_filename',
-                        required=False,
-                        metavar='TEXT',
-                        help='JSON job file to use')
-
     parser.add_argument('--dev-mode',
                         action='store_true',
                         dest='dev_mode',
@@ -145,24 +139,25 @@ def get_env_var(variable, default):
     return result
 
 
-def get_jobs(job_filename):
+def get_jobs(base_id):
     """Reads jobs from a known job file location
     """
 
     jobs = list()
 
-    if job_filename and os.path.isfile(job_filename):
-        with open(job_filename, 'r') as input_fd:
-            data = input_fd.read()
+    job_count = random.randint(1, 10)
 
-        job_dict = json.loads(data)
-        del data
+    for job_id in range(0, job_count):
+        job = dict()
+        job['id'] = '{0}_{1:0>5}_{2:0>3}'.format(SYSTEM, base_id, job_id)
+        job['cpus'] = int(random.uniform(0.2, 0.5) * 10) / 10
+        job['mem'] = 512
+        job['disk'] = 512
+        job['docker'] = dict()
+        job['docker']['image'] = 'mesos-demo/worker'
+        job['docker']['tag'] = '0.0.1.0'
 
-        for job in job_dict['jobs']:
-            jobs.append(job)
-
-        os.unlink(job_filename)
-
+        jobs.append(job)
     return jobs
 
 
@@ -170,24 +165,28 @@ def main():
     """Main processing for the application
     """
 
-    global MSG_SERVICE_STRING
+    global MSG_SERVICE_CONNECTION_STRING
     global MSG_WORK_QUEUE
     global MSG_STATUS_QUEUE
 
     # Example connection string: amqp://<username>:<password>@<host>:<port>
-    MSG_SERVICE_STRING = get_env_var('PROTO_MSG_SERVICE_CONNECTION_STRING', None)
-    MSG_WORK_QUEUE = get_env_var('PROTO_MSG_WORK_QUEUE', None)
-    MSG_STATUS_QUEUE = get_env_var('PROTO_MSG_STATUS_QUEUE', None)
+    MSG_SERVICE_CONNECTION_STRING = get_env_var('DEMO_MSG_SERVICE_CONNECTION_STRING', None)
+    MSG_WORK_QUEUE = get_env_var('DEMO_MSG_WORK_QUEUE', None)
+    MSG_STATUS_QUEUE = get_env_var('DEMO_MSG_STATUS_QUEUE', None)
 
     args = retrieve_command_line()
+
+    random.seed(time.gmtime())
 
     # Configure logging
     setup_logging(args)
 
     # Create the connection parameters
-    connection_parms = pika.connection.URLParameters(MSG_SERVICE_STRING)
+    connection_parms = pika.connection.URLParameters(MSG_SERVICE_CONNECTION_STRING)
 
     queue_properties = pika.BasicProperties(delivery_mode=2)
+
+    base_id = 1
 
     logger.info('Beginning Processing')
 
@@ -197,11 +196,10 @@ def main():
             with pika.BlockingConnection(connection_parms) as connection:
                 # Open a channel
                 with connection.channel() as channel:
-
                     # Create/assign the queue to use
                     channel.queue_declare(queue=MSG_WORK_QUEUE, durable=True)
 
-                    jobs = get_jobs(args.job_filename)
+                    jobs = get_jobs(base_id)
                     for job in jobs:
                         message_json = json.dumps(job, ensure_ascii=False)
 
@@ -215,14 +213,16 @@ def main():
                             # TODO - This prototype doesn't care, but we
                             # TODO -   should probably update the status at
                             # TODO -   the work source.
-                            print('Queued Message = {}'.format(message_json))
+                            logger.info('Queued Message = {}'.format(message_json))
                         except pika.exceptions.ChannelClosed:
                             # TODO - This prototype doesn't care, but does
                             # TODO -   something need to be done if this
                             # TODO -   happens?
-                            print('Returned Message = {}'.format(message_json))
+                            logger.info('Returned Message = {}'.format(message_json))
 
-            sleep(60)
+            time.sleep(random.randint(1, 30))
+
+            base_id = base_id + 1
 
     except KeyboardInterrupt:
         pass
