@@ -1,0 +1,55 @@
+
+  "id": "/mesos-demo/workmanager",
+  "cmd": "work-manager.py",
+  "cpus": 0.2,
+  "mem": 512,
+  "disk": 0,
+  "instances": 0,
+  "acceptedResourceRoles": [
+    "*"
+  ],
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "forcePullImage": false,
+      "image": "mesos-demo/work-manager:0.0.1.0",
+      "parameters": [],
+      "privileged": false
+    },
+    "volumes": [],
+    "portMappings": [
+      {
+        "containerPort": 0,
+        "labels": {},
+        "name": "default",
+        "protocol": "tcp",
+        "servicePort": 10002
+      }
+    ]
+  },
+  "env": {
+    "DEMO_MSG_SERVICE_CONNECTION_STRING": "amqp://admin:admin-123@messageservice_rabbit_1.rabbit:5672",
+    "DEMO_MSG_STATUS_QUEUE": "demo-status",
+    "DEMO_MSG_WORK_QUEUE": "demo-work"
+  },
+  "healthChecks": [
+    {
+      "command": {
+        "value": "/bin/true"
+      },
+      "gracePeriodSeconds": 300,
+      "intervalSeconds": 60,
+      "maxConsecutiveFailures": 3,
+      "protocol": "COMMAND",
+      "timeoutSeconds": 20,
+      "delaySeconds": 15
+    }
+  ],
+  "networks": [
+    {
+      "name": "rabbit",
+      "mode": "container"
+    }
+  ],
+  "portDefinitions": []
+}
