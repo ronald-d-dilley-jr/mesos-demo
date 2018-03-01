@@ -17,9 +17,14 @@ export DEMO_DOCKER_WORKDIR=/mnt/mesos/sandbox
 
 export DEMO_MESOS_MAX_JOBS=10
 export DEMO_MESOS_MASTER=zk://127.0.0.1:2181/mesos
-export DEMO_MESOS_USER=demo
+export DEMO_MESOS_USER=$USER
 export DEMO_MESOS_PRINCIPAL=demo
 export DEMO_MESOS_ROLE=demo
-export DEMO_MESOS_SECRET=randomnoise
+export DEMO_MESOS_SECRET=something
 export DEMO_MESOS_FRAMEWORK_NAME="Demo Framework"
 export DEMO_MESOS_EXECUTOR_NAME="Demo Executor"
+
+#export DEMO_WORKER_SEED=aaaaaaaa
+export DEMO_WORKER_STANDARD_RANGE=2
+export DEMO_WORKER_VARIATION_RANGE=3
+export DEMO_WORKER_VARIATION_PERCENTAGE=25
