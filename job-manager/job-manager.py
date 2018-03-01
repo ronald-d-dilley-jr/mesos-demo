@@ -24,6 +24,7 @@ SYSTEM = 'MESOS_DEMO'
 COMPONENT = 'job-manager'
 
 shutdown = None
+accept_offers = None
 driver = None
 
 
@@ -132,7 +133,22 @@ class Shutdown():
 
     def shutdown(self, signum, frame):
         self.flag = True
-        logger.info('Shutdown Requested')
+        logger.info('Shutdown Requested - Signal')
+
+
+class AcceptOffers():
+    # Flag to set the driver to decline offers
+
+    def __init__(self):
+        self.flag = True
+
+    def decline_offers(self, signum, frame):
+        self.flag = False
+        logger.info('Decline Offers Requested')
+
+    def accept_offers(self, signum, frame):
+        self.flag = True
+        logger.info('Accept Offers Requested')
 
 
 WorkInfo = namedtuple('WorkInfo',
@@ -140,11 +156,11 @@ WorkInfo = namedtuple('WorkInfo',
 
 class Work(object):
 
-    def __init__(self, proc_id, job_number, cfg, info):
-        self.proc_id = proc_id
+    def __init__(self, job_number, cfg, info):
         self.job_number = job_number
-        self.info = cfg
+        self.cfg = cfg
         self.info = info
+        self.container_info = dict()
 
     def check_resources(self, cpus, mem, disk):
         """Compare the work requirements against the offered resources
@@ -162,9 +178,11 @@ class Work(object):
         """
 
         cmd = list()
-        cmd.append('/usr/local/bin/example-worker.py')
 
-        logger.info(' '.join(cmd))
+        for part in self.info.body['command']:
+            cmd.append(part)
+
+        logger.info('Created Command: {}'.format(' '.join(cmd)))
 
         return ' '.join(cmd)
 
@@ -173,13 +191,13 @@ class Work(object):
            the jobs running withing the Mesos cluster.
         """
 
-        return ('{}-{}-{}'.format(SYSTEM, proc_id, job_number))
+        return ('{}-{}-{}'.format(SYSTEM, self.info.body['id'], self.job_number))
 
     def get_task_name(self):
         """For job identification within Mesos
         """
 
-        return ('{} {} {}'.format(SYSTEM, proc_id, job_number))
+        return ('{} {} {}'.format(SYSTEM, self.info.body['id'], self.job_number))
 
     def make_task(self, offer):
         """Create a Mesos task from the job information
@@ -200,7 +218,8 @@ class Work(object):
         docker_cfg = self.info.body['docker']
         docker = MesosPb2.ContainerInfo.DockerInfo()
         docker.image = ':'.join([docker_cfg['image'], docker_cfg['tag']])
-        docker.network = 2  # MesosPb2.ContainerInfo.DockerInfo.Network.BRIDGE
+        ##docker.network = 2  # MesosPb2.ContainerInfo.DockerInfo.BRIDGE
+        docker.network = 1  # MesosPb2.ContainerInfo.DockerInfo.HOST
         docker.force_pull_image = False
 
         # Specify who to run as within the Docker Container
@@ -234,6 +253,17 @@ class Work(object):
 
         # Add the docker uri for logging into the remote repository
         #command.uris.add().value = self.cfg.docker.cfg
+        variable = command.environment.variables.add()
+        variable.name = 'DEMO_WORKER_STANDARD_RANGE'
+        variable.value = '10'
+
+        variable = command.environment.variables.add()
+        variable.name = 'DEMO_WORKER_VARIATION_RANGE'
+        variable.value = '10'
+
+        variable = command.environment.variables.add()
+        variable.name = 'DEMO_WORKER_VARIATION_PERCENTAGE'
+        variable.value = '50'
 
         '''
         The MergeFrom allows to create an object then to use this object
@@ -327,7 +357,7 @@ class OurMesosScheduler(MesosScheduler):
         raise NotImplementedError('[{}] Requires implementation in the child'
                                   ' class'.format(self.send_status.__name__))
 
-    def disposition_state(state):
+    def disposition_state(self, state):
         """Implemented in child
         """
 
@@ -335,7 +365,7 @@ class OurMesosScheduler(MesosScheduler):
                                   ' class'.format(self.disposition_state
                                                   .__name__))
 
-    def get_mesos_endpoint(url):
+    def get_mesos_endpoint(self, url):
         """Returns the json content from the specified url as a dictionary
         """
 
@@ -356,7 +386,7 @@ class OurMesosScheduler(MesosScheduler):
 
         return data
 
-    def get_agent_hostname(agent_id):
+    def get_agent_hostname(self, agent_id):
         """Retrieves the hostname for the specified Agent ID
 
         Args:
@@ -366,7 +396,7 @@ class OurMesosScheduler(MesosScheduler):
             <str>: Hostname for the Agent
         """
 
-        data = get_mesos_endpoint(url=self.agents_url)
+        data = self.get_mesos_endpoint(url=self.agents_url)
 
         for agent in data['slaves']:
             if agent['id'] == agent_id:
@@ -374,7 +404,7 @@ class OurMesosScheduler(MesosScheduler):
 
         return None
 
-    def get_agent_id(framework_id, task_id):
+    def get_agent_id(self, framework_id, task_id):
         """Retrieves the Agent ID information for the specified Task ID
 
         Args:
@@ -385,7 +415,7 @@ class OurMesosScheduler(MesosScheduler):
             <str>: Agent ID
         """
 
-        data = get_mesos_endpoint(url=self.tasks_url)
+        data = self.get_mesos_endpoint(url=self.tasks_url)
 
         for task in data['tasks']:
             if (task['framework_id'] == framework_id and task['id'] == task_id):
@@ -411,8 +441,8 @@ class OurMesosScheduler(MesosScheduler):
         self.framework_id = frameworkId.value
         self.master_node = masterInfo.hostname
         self.master_port = masterInfo.port
-        self.agents_url = 'https://{}:{}/slaves'.format(self.master_node, self.master_port)
-        self.tasks_url = 'https://{}:{}/tasks'.format(self.master_node, self.master_port)
+        self.agents_url = 'http://{}:{}/slaves'.format(self.master_node, self.master_port)
+        self.tasks_url = 'http://{}:{}/tasks'.format(self.master_node, self.master_port)
 
     def reregistered(self, driver, masterInfo):
         """The framework was re-registered so log it
@@ -446,6 +476,8 @@ class OurMesosScheduler(MesosScheduler):
                 logger.debug('Shutdown Requested - Declining all offers')
             for offer in offers:
                 driver.declineOffer(offer.id)
+            if self.tasks_launched == 0:
+                self._stop_event.set()
             return
 
         for offer in offers:
@@ -485,11 +517,12 @@ class OurMesosScheduler(MesosScheduler):
                 if work.check_resources(offerCpus, offerMem, offerDisk):
 
                     tasks.append(work.make_task(offer))
+
                     self.active_tasks[work.get_task_id()] = work
 
-                    offerCpus -= work.cfg.body['cpus']
-                    offerMem -= work.cfg.body['mem']
-                    offerDisk -= work.cfg.body['disk']
+                    offerCpus -= work.info.body['cpus']
+                    offerMem -= work.info.body['mem']
+                    offerDisk -= work.info.body['disk']
 
                     # Send a message that we have created a task for this work
                     self.send_status(work, self.states.queued)
@@ -511,8 +544,9 @@ class OurMesosScheduler(MesosScheduler):
             del tasks
 
         if self.cfg.debug > 0:
-            logger.debug('Queued job count {}'.format(len(self.job_queue)))
+            logger.debug('Queued job count {}'.format(len(self.active_tasks)))
             logger.debug('Running job count {}'.format(self.tasks_launched))
+            logger.debug('Have work {}'.format(self.have_work()))
 
 
     def statusUpdate(self, driver, status):
@@ -532,13 +566,13 @@ class OurMesosScheduler(MesosScheduler):
         # Gather the container information for the running task, so it can be
         # used later during the finished or failed statuses
         if state == MesosPb2.TASK_RUNNING:
-            container_info = json.loads('{{"data": {} }}' .format(status.data))
+            container_info = json.loads('{{"data": {} }}'.format(status.data))
             self.active_tasks[task_id].set_container_info(container_info)
             self.send_status(self.active_tasks[task_id], self.states.running)
 
             if self.cfg.debug > 3:
                 logger.debug('master_node {}'.format(self.master_node))
-                agent_id = get_agent_id(self.framework_id, task_id)
+                agent_id = self.get_agent_id(self.framework_id, task_id)
                 logger.debug('agent_id {}'.format(agent_id))
 
         if (state == MesosPb2.TASK_FINISHED or
@@ -547,24 +581,26 @@ class OurMesosScheduler(MesosScheduler):
                 state == MesosPb2.TASK_ERROR or
                 state == MesosPb2.TASK_FAILED):
 
-            agent_id = get_agent_id(self.framework_id, task_id)
-            agent_hostname = get_agent_hostname(agent_id)
+            #agent_id = self.get_agent_id(self.framework_id, task_id)
+            #agent_hostname = self.get_agent_hostname(agent_id)
 
-            if self.cfg.debug > 3:
-                logger.debug('agent_id {}'.format(agent_id))
-                logger.debug('agent_hostname {}'.format(agent_hostname))
+            #if self.cfg.debug > 3:
+            #    logger.debug('agent_id {}'.format(agent_id))
+            #    logger.debug('agent_hostname {}'.format(agent_hostname))
 
-            for mount in self.active_tasks[task_id].container_info['data'][0]['Mounts']:
-                if mount['Destination'] == '/mnt/mesos/sandbox':
-                    logger.info('Logfile Location = {}:{}'
-                                .format(agent_hostname, mount['Source']))
+            #if task_id in self.active_tasks:
+            #    if 'data' in self.active_tasks[task_id].container_info:
+            #        for mount in self.active_tasks[task_id].container_info['data'][0]['Mounts']:
+            #            if mount['Destination'] == '/mnt/mesos/sandbox':
+            #                logger.info('Logfile Location = {}:{}'
+            #                            .format(agent_hostname, mount['Source']))
 
-            self.tasks_launched -= 1
-
-            disposition_state(state)
+            self.disposition_state(task_id, state)
 
             # Remove from the active tasks
             del self.active_tasks[task_id]
+
+            self.tasks_launched -= 1
 
         if shutdown.flag and self.tasks_launched == 0:
             logger.info('All Tasks Accounted For')
@@ -592,13 +628,12 @@ WorkStateInfo = namedtuple('WorkStateInfo',
 
 class OurJobScheduler(OurMesosScheduler):
 
-    def __init__(self, proc_id, cfg):
+    def __init__(self, cfg):
 
         executor = MesosPb2.ExecutorInfo()
         executor.executor_id.value = 'default'
         executor.name = cfg.mesos.executor_name
 
-        self.proc_id = proc_id
         self.cfg = cfg
         self.job_number = cfg.starting_job_number
 
@@ -645,7 +680,7 @@ class OurJobScheduler(OurMesosScheduler):
 
         if method_frame:
             self.job_number += 1
-            return Work(self.proc_id, self.job_number, self.cfg,
+            return Work(self.job_number, self.cfg,
                         WorkInfo(method_frame=method_frame,
                                  header_frame=header_frame,
                                  body=json.loads(body)))
@@ -659,8 +694,8 @@ class OurJobScheduler(OurMesosScheduler):
         self.msg_work_channel.basic_nack(delivery_tag=work.info.method_frame.delivery_tag)
 
     def send_status(self, work, status):
-        order_id = work.info.body['order']['order-id']
-        message = {'order-id': order_id, 'status': status}
+        job_id = work.info.body['id']
+        message = {'id': job_id, 'status': status}
         message_json = json.dumps(message, ensure_ascii=False)
         self.msg_status_channel.basic_publish(exchange='',
                                               routing_key=self.cfg.message.status_queue,
@@ -668,7 +703,7 @@ class OurJobScheduler(OurMesosScheduler):
                                               properties=self.queue_properties,
                                               mandatory=True)
 
-    def disposition_state(state):
+    def disposition_state(self, task_id, state):
         # TODO TODO TODO - More research should be spent here with the
         # TODO TODO TODO - states to properly respond.
 
@@ -777,6 +812,7 @@ def get_configuration():
 def main():
 
     global shutdown
+    global accept_offers
     global driver
 
     cfg = get_configuration()
@@ -787,7 +823,7 @@ def main():
     framework = mesos_framework(cfg)
     #credentials = mesos_credentials(cfg)
 
-    mesos_scheduler = OurJobScheduler(os.getpid(), cfg)
+    mesos_scheduler = OurJobScheduler(cfg)
     #driver = MesosSchedulerDriver(mesos_scheduler, framework,
     #                              cfg.mesos.master, cfg.mesos.imp_ack,
     #                              credentials)
@@ -795,6 +831,7 @@ def main():
                                   cfg.mesos.master, cfg.mesos.imp_ack)
 
     shutdown = Shutdown()
+    accept_offers = AcceptOffers()
 
     # driver.run() blocks, so run it in a separate thread.
     def run_driver_async():
@@ -820,12 +857,10 @@ def main():
             driver.suppressOffers()
 
             while framework_thread.is_alive():
+                logger.debug('Child Thread Still Alive')
                 sleep(5)
 
             break
-
-        if cfg.debug > 0:
-            logger.debug('Thread Alive')
 
         # If there's no new work to be done or the max number of jobs are
         # already running, suppress offers and wait for some jobs to finish.
@@ -840,18 +875,26 @@ def main():
             while (not shutdown.flag and
                    mesos_scheduler.tasks_launched == cfg.mesos.max_jobs):
 
+                if cfg.debug > 0:
+                    logger.debug('Waiting for more available tasks')
+
                 sleep(20)
 
             # Sleep until more processing is requested
             while not shutdown.flag and not mesos_scheduler.have_work():
-                mesos_scheduler.check_for_work()
-                sleep(20)
 
+                if cfg.debug > 0:
+                    logger.debug('Waiting for more work')
+
+                sleep(20)
 
             if not shutdown.flag:
                 if cfg.debug > 0:
                     logger.debug('Reviving Offers')
                 driver.reviveOffers()
+
+            if shutdown.flag and mesos_scheduler.tasks_launched == 0:
+                break
 
     logger.info('Terminated Processing')
 
