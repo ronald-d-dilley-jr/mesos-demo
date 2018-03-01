@@ -1,0 +1,57 @@
+{
+  "id": "/mesos-demo/jobmanager",
+  "cmd": "job-manager.py",
+  "cpus": 0.2,
+  "mem": 512,
+  "disk": 0,
+  "instances": 0,
+  "acceptedResourceRoles": [
+    "*"
+  ],
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "forcePullImage": false,
+      "image": "mesos-demo/job-manager:0.0.1.0",
+      "parameters": [],
+      "privileged": false
+    },
+    "volumes": []
+  },
+  "env": {
+    "DEMO_DOCKER_GROUP_ID": "1000",
+    "DEMO_MESOS_ROLE": "demo",
+    "DEMO_MSG_WORK_QUEUE": "demo-work",
+    "DEMO_MESOS_PRINCIPAL": "demo",
+    "DEMO_MESOS_USER": "rdilley",
+    "DEMO_DOCKER_USER_ID": "1000",
+    "DEMO_MESOS_SECRET": "demo-123",
+    "DEMO_MSG_SERVICE_CONNECTION_STRING": "amqp://admin:admin-123@172.17.0.1:5672",
+    "DEMO_DOCKER_WORKDIR": "/mnt/mesos/sandbox",
+    "DEMO_MESOS_MASTER": "zk://172.17.0.1:2181/mesos",
+    "DEMO_MESOS_EXECUTOR_NAME": "Demo Executor",
+    "DEMO_MESOS_FRAMEWORK_NAME": "Demo Framework",
+    "DEMO_MSG_STATUS_QUEUE": "demo-status",
+    "DEMO_MESOS_MAX_JOBS": "50"
+  },
+  "healthChecks": [
+    {
+      "command": {
+        "value": "/bin/true"
+      },
+      "gracePeriodSeconds": 300,
+      "intervalSeconds": 60,
+      "maxConsecutiveFailures": 3,
+      "protocol": "COMMAND",
+      "timeoutSeconds": 20,
+      "delaySeconds": 15
+    }
+  ],
+  "portDefinitions": [
+    {
+      "port": 10001,
+      "name": "default",
+      "protocol": "tcp"
+    }
+  ]
+}
