@@ -1,4 +1,4 @@
-
+{
   "id": "/mesos-demo/workmanager",
   "cmd": "work-manager.py",
   "cpus": 0.2,
@@ -16,19 +16,10 @@
       "parameters": [],
       "privileged": false
     },
-    "volumes": [],
-    "portMappings": [
-      {
-        "containerPort": 0,
-        "labels": {},
-        "name": "default",
-        "protocol": "tcp",
-        "servicePort": 10002
-      }
-    ]
+    "volumes": []
   },
   "env": {
-    "DEMO_MSG_SERVICE_CONNECTION_STRING": "amqp://admin:admin-123@messageservice_rabbit_1.rabbit:5672",
+    "DEMO_MSG_SERVICE_CONNECTION_STRING": "amqp://admin:admin-123@172.17.0.1:5672",
     "DEMO_MSG_STATUS_QUEUE": "demo-status",
     "DEMO_MSG_WORK_QUEUE": "demo-work"
   },
@@ -45,11 +36,11 @@
       "delaySeconds": 15
     }
   ],
-  "networks": [
+  "portDefinitions": [
     {
-      "name": "rabbit",
-      "mode": "container"
+      "port": 10002,
+      "name": "default",
+      "protocol": "tcp"
     }
-  ],
-  "portDefinitions": []
+  ]
 }
