@@ -156,8 +156,11 @@ def get_jobs(base_id):
         job['docker'] = dict()
         job['docker']['image'] = 'mesos-demo/worker'
         job['docker']['tag'] = '0.0.1.0'
+        job['command'] = list()
+        job['command'].append('/usr/local/bin/demo-worker.py')
 
         jobs.append(job)
+
     return jobs
 
 
