@@ -257,15 +257,15 @@ class Work(object):
         # Add any required environment variables
         variable = command.environment.variables.add()
         variable.name = 'DEMO_WORKER_STANDARD_RANGE'
-        variable.value = '10'
+        variable.value = self.cfg.worker.std_range
 
         variable = command.environment.variables.add()
         variable.name = 'DEMO_WORKER_VARIATION_RANGE'
-        variable.value = '10'
+        variable.value = self.cfg.worker.var_range
 
         variable = command.environment.variables.add()
         variable.name = 'DEMO_WORKER_VARIATION_PERCENTAGE'
-        variable.value = '50'
+        variable.value = self.cfg.worker.var_percent
 
         '''
         The MergeFrom allows to create an object then to use this object
@@ -778,8 +778,10 @@ DockerInfo = namedtuple('DockerInfo',
 MesosInfo = namedtuple('MesosInfo',
                        ('max_jobs', 'master', 'user', 'principal', 'role', 'secret',
                         'framework_name', 'executor_name', 'imp_ack'))
+WorkerInfo = namedtuple('WorkerInfo',
+                        ('std_range', 'var_range', 'var_percent'))
 ConfigInfo = namedtuple('ConfigInfo',
-                        ('message', 'docker', 'mesos', 'starting_job_number', 'debug'))
+                        ('message', 'docker', 'mesos', 'worker', 'starting_job_number', 'debug'))
 
 
 def get_configuration():
@@ -803,9 +805,15 @@ def get_configuration():
                            executor_name=get_env_var('DEMO_MESOS_EXECUTOR_NAME', None),
                            imp_ack=1)
 
+    worker_info = WorkerInfo(std_range=get_env_var('DEMO_WORKER_STANDARD_RANGE', None),
+                             var_range=get_env_var('DEMO_WORKER_VARIATION_RANGE', None),
+                             var_percent=get_env_var('DEMO_WORKER_VARIATION_PERCENTAGE', None))
+
+
     args = retrieve_command_line()
 
     config_info = ConfigInfo(message=msg_info, docker=docker_info, mesos=mesos_info,
+                             worker=worker_info,
                              starting_job_number=args.starting_job_number, debug=args.debug)
 
     return config_info

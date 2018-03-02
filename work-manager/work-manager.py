@@ -27,6 +27,10 @@ COMPONENT = 'work-manager'
 MSG_SERVICE_CONNECTION_STRING = None
 MSG_WORK_QUEUE = None
 MSG_STATUS_QUEUE = None
+JOB_RANGE_MIN = None
+JOB_RANGE_MAX = None
+CPU_RANGE_MIN = None
+CPU_RANGE_MAX = None
 
 
 class LoggingFilter(logging.Filter):
@@ -106,15 +110,8 @@ def retrieve_command_line():
     """Read and return the command line arguments
     """
 
-    description = 'Prototype Work Manager'
+    description = 'Demo Work Manager'
     parser = ArgumentParser(description=description)
-
-    parser.add_argument('--dev-mode',
-                        action='store_true',
-                        dest='dev_mode',
-                        required=False,
-                        default=False,
-                        help='Run in developer mode')
 
     parser.add_argument('--debug',
                         action='store',
@@ -145,13 +142,25 @@ def get_jobs(base_id):
 
     jobs = list()
 
-    job_count = random.randint(1, 10)
+    jmin = JOB_RANGE_MIN
+    jmax = JOB_RANGE_MAX
+
+    if base_id % 5 == 0:
+        jmin = jmax
+        jmax = jmax * 2
+
+    if base_id % 20 == 0:
+        jmin = jmax
+        jmax = jmin + 10
+
+    job_count = random.randint(jmin, jmax)
 
     for job_id in range(0, job_count):
         job = dict()
         job['id'] = '{0}_{1:0>5}_{2:0>3}'.format(SYSTEM, base_id, job_id)
-        job['cpus'] = int(random.uniform(0.2, 0.5) * 10) / 10
-        job['mem'] = 512
+        #job['cpus'] = int(random.uniform(CPU_RANGE_MIN, CPU_RANGE_MAX) * 10) / 10
+        job['cpus'] = 0.2
+        job['mem'] = 256
         job['disk'] = 512
         job['docker'] = dict()
         job['docker']['image'] = 'mesos-demo/worker'
@@ -171,15 +180,23 @@ def main():
     global MSG_SERVICE_CONNECTION_STRING
     global MSG_WORK_QUEUE
     global MSG_STATUS_QUEUE
+    global JOB_RANGE_MIN
+    global JOB_RANGE_MAX
+    global CPU_RANGE_MIN
+    global CPU_RANGE_MAX
 
     # Example connection string: amqp://<username>:<password>@<host>:<port>
     MSG_SERVICE_CONNECTION_STRING = get_env_var('DEMO_MSG_SERVICE_CONNECTION_STRING', None)
     MSG_WORK_QUEUE = get_env_var('DEMO_MSG_WORK_QUEUE', None)
     MSG_STATUS_QUEUE = get_env_var('DEMO_MSG_STATUS_QUEUE', None)
+    JOB_RANGE_MIN = int(get_env_var('DEMO_WORK_MANAGER_JOB_RANGE_MIN', 1))
+    JOB_RANGE_MAX = int(get_env_var('DEMO_WORK_MANAGER_JOB_RANGE_MAX', 10))
+    CPU_RANGE_MIN = float(get_env_var('DEMO_WORK_MANAGER_CPU_RANGE_MIN', 0.2))
+    CPU_RANGE_MAX = float(get_env_var('DEMO_WORK_MANAGER_CPU_RANGE_MAX', 0.5))
 
     args = retrieve_command_line()
 
-    random.seed(time.gmtime())
+    random.seed(1234567890)
 
     # Configure logging
     setup_logging(args)
@@ -223,7 +240,7 @@ def main():
                             # TODO -   happens?
                             logger.info('Returned Message = {}'.format(message_json))
 
-            time.sleep(random.randint(1, 30))
+            time.sleep(5)
 
             base_id = base_id + 1
 
