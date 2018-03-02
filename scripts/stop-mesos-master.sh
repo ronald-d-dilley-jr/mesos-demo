@@ -1,2 +1,4 @@
 sudo true
-sudo systemctl stop mesos-master
+cmd="sudo systemctl stop mesos-master"
+echo ${cmd}
+${cmd}

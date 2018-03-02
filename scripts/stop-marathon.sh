@@ -1,2 +1,4 @@
 sudo true
-sudo systemctl stop marathon
+cmd="sudo systemctl stop marathon"
+echo ${cmd}
+${cmd}

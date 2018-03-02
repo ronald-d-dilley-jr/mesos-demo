@@ -47,8 +47,3 @@ port=5059
 cmd=`echo ${demo_cmd} | sed -e "s/DEMO_PORT/${port}/g"`
 echo ${cmd}
 ${cmd} > /dev/null 2>&1 &
-
-port=5060
-cmd=`echo ${demo_cmd} | sed -e "s/DEMO_PORT/${port}/g"`
-echo ${cmd}
-${cmd} > /dev/null 2>&1 &

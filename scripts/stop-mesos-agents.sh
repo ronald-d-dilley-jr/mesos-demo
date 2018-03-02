@@ -1,2 +1,4 @@
 sudo true
-sudo pkill mesos-slave
+cmd="sudo pkill mesos-slave"
+echo ${cmd}
+${cmd}

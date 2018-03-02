@@ -1,2 +1,4 @@
 sudo true
-sudo systemctl start marathon
+cmd="sudo systemctl start marathon"
+echo ${cmd}
+${cmd}
