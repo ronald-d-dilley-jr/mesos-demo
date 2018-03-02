@@ -253,6 +253,8 @@ class Work(object):
 
         # Add the docker uri for logging into the remote repository
         #command.uris.add().value = self.cfg.docker.cfg
+
+        # Add any required environment variables
         variable = command.environment.variables.add()
         variable.name = 'DEMO_WORKER_STANDARD_RANGE'
         variable.value = '10'
