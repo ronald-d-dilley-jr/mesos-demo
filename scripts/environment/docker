@@ -1,0 +1,4 @@
+export DEMO_DOCKER_USER_ID=`id -u`
+export DEMO_DOCKER_GROUP_ID=`id -g`
+#export DEMO_DOCKER_CFG=/path/to/dockercfg.tar.gz
+export DEMO_DOCKER_WORKDIR=/mnt/mesos/sandbox

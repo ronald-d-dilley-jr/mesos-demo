@@ -1,0 +1,8 @@
+export DEMO_MESOS_MAX_JOBS=10
+export DEMO_MESOS_MASTER=zk://127.0.0.1:2181/mesos
+export DEMO_MESOS_USER=$USER
+export DEMO_MESOS_PRINCIPAL=demo
+export DEMO_MESOS_ROLE=demo
+export DEMO_MESOS_SECRET=something
+export DEMO_MESOS_FRAMEWORK_NAME="Demo Framework"
+export DEMO_MESOS_EXECUTOR_NAME="Demo Executor"
