@@ -11,8 +11,8 @@ import os
 import sys
 import json
 import logging
-import random
 import time
+import math
 from argparse import ArgumentParser
 
 
@@ -27,10 +27,6 @@ COMPONENT = 'work-manager'
 MSG_SERVICE_CONNECTION_STRING = None
 MSG_WORK_QUEUE = None
 MSG_STATUS_QUEUE = None
-JOB_RANGE_MIN = None
-JOB_RANGE_MAX = None
-CPU_RANGE_MIN = None
-CPU_RANGE_MAX = None
 
 
 class LoggingFilter(logging.Filter):
@@ -142,23 +138,15 @@ def get_jobs(base_id):
 
     jobs = list()
 
-    jmin = JOB_RANGE_MIN
-    jmax = JOB_RANGE_MAX
-
-    if base_id % 5 == 0:
-        jmin = jmax
-        jmax = jmax * 2
-
-    if base_id % 20 == 0:
-        jmin = jmax
-        jmax = jmin + 10
-
-    job_count = random.randint(jmin, jmax)
+    # This generates a nice sine wave to boost the number of jobs and to
+    # allow periodically draining the system
+    job_count = int(10 * math.sin(base_id / 5.0) + 5)
+    if job_count < 1:
+        job_count = 1
 
     for job_id in range(0, job_count):
         job = dict()
         job['id'] = '{0}_{1:0>5}_{2:0>3}'.format(SYSTEM, base_id, job_id)
-        #job['cpus'] = int(random.uniform(CPU_RANGE_MIN, CPU_RANGE_MAX) * 10) / 10
         job['cpus'] = 0.2
         job['mem'] = 256
         job['disk'] = 512
@@ -180,23 +168,13 @@ def main():
     global MSG_SERVICE_CONNECTION_STRING
     global MSG_WORK_QUEUE
     global MSG_STATUS_QUEUE
-    global JOB_RANGE_MIN
-    global JOB_RANGE_MAX
-    global CPU_RANGE_MIN
-    global CPU_RANGE_MAX
 
     # Example connection string: amqp://<username>:<password>@<host>:<port>
     MSG_SERVICE_CONNECTION_STRING = get_env_var('DEMO_MSG_SERVICE_CONNECTION_STRING', None)
     MSG_WORK_QUEUE = get_env_var('DEMO_MSG_WORK_QUEUE', None)
     MSG_STATUS_QUEUE = get_env_var('DEMO_MSG_STATUS_QUEUE', None)
-    JOB_RANGE_MIN = int(get_env_var('DEMO_WORK_MANAGER_JOB_RANGE_MIN', 1))
-    JOB_RANGE_MAX = int(get_env_var('DEMO_WORK_MANAGER_JOB_RANGE_MAX', 10))
-    CPU_RANGE_MIN = float(get_env_var('DEMO_WORK_MANAGER_CPU_RANGE_MIN', 0.2))
-    CPU_RANGE_MAX = float(get_env_var('DEMO_WORK_MANAGER_CPU_RANGE_MAX', 0.5))
 
     args = retrieve_command_line()
-
-    random.seed(1234567890)
 
     # Configure logging
     setup_logging(args)
@@ -240,7 +218,7 @@ def main():
                             # TODO -   happens?
                             logger.info('Returned Message = {}'.format(message_json))
 
-            time.sleep(5)
+            time.sleep(4)
 
             base_id = base_id + 1
 
