@@ -847,7 +847,8 @@ def main():
     def run_driver_async():
         status = 0 if driver.run() == MesosPb2.DRIVER_STOPPED else 1
 
-        logger.debug('Stopping Driver')
+        if cfg.debug > 0:
+            logger.debug('Stopping Driver')
         driver.stop()
 
         logger.info('Terminating Framework')
@@ -875,7 +876,6 @@ def main():
         # If there's no new work to be done or the max number of jobs are
         # already running, suppress offers and wait for some jobs to finish.
         if (mesos_scheduler.tasks_launched == cfg.mesos.max_jobs):
-
             driver.suppressOffers()
 
             if cfg.debug > 0:
@@ -884,19 +884,32 @@ def main():
             # Sleep until we have room for more tasks
             while (not shutdown.flag and
                    mesos_scheduler.tasks_launched == cfg.mesos.max_jobs):
-
                 if cfg.debug > 0:
                     logger.debug('Waiting for more available tasks')
-
-                sleep(20)
+                sleep(5)
 
             # Sleep until more processing is requested
             while not shutdown.flag and not mesos_scheduler.have_work():
-
                 if cfg.debug > 0:
                     logger.debug('Waiting for more work')
+                sleep(5)
 
-                sleep(20)
+            if not shutdown.flag:
+                if cfg.debug > 0:
+                    logger.debug('Reviving Offers')
+                driver.reviveOffers()
+
+            if shutdown.flag and mesos_scheduler.tasks_launched == 0:
+                break
+
+        if not shutdown.flag and not mesos_scheduler.have_work():
+            driver.suppressOffers()
+
+            # Sleep until more processing is requested
+            while not shutdown.flag and not mesos_scheduler.have_work():
+                if cfg.debug > 0:
+                    logger.debug('Waiting for more work')
+                sleep(5)
 
             if not shutdown.flag:
                 if cfg.debug > 0:
