@@ -20,11 +20,7 @@
   },
   "env": {
     "DEMO_MSG_WORK_QUEUE": "demo-work",
-    "DEMO_WORK_MANAGER_CPU_RANGE_MAX": "0.5",
-    "DEMO_WORK_MANAGER_JOB_RANGE_MAX": "10",
     "DEMO_MSG_SERVICE_CONNECTION_STRING": "amqp://admin:admin-123@172.17.0.1:5672",
-    "DEMO_WORK_MANAGER_JOB_RANGE_MIN": "3",
-    "DEMO_WORK_MANAGER_CPU_RANGE_MIN": "0.2",
     "DEMO_MSG_STATUS_QUEUE": "demo-status"
   },
   "healthChecks": [
