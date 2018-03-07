@@ -873,8 +873,8 @@ def main():
 
             break
 
-        # If there's no new work to be done or the max number of jobs are
-        # already running, suppress offers and wait for some jobs to finish.
+        # If the max number of jobs are already running, suppress offers and
+        # wait for some jobs to finish.
         if (mesos_scheduler.tasks_launched == cfg.mesos.max_jobs):
             driver.suppressOffers()
 
@@ -899,9 +899,8 @@ def main():
                     logger.debug('Reviving Offers')
                 driver.reviveOffers()
 
-            if shutdown.flag and mesos_scheduler.tasks_launched == 0:
-                break
-
+        # If there's no new work to be done, suppress offers until we have
+        # more work
         if not shutdown.flag and not mesos_scheduler.have_work():
             driver.suppressOffers()
 
@@ -916,8 +915,8 @@ def main():
                     logger.debug('Reviving Offers')
                 driver.reviveOffers()
 
-            if shutdown.flag and mesos_scheduler.tasks_launched == 0:
-                break
+        # Sleep for a second, so that we are not flying through the loop
+        sleep(1)
 
     logger.info('Terminated Processing')
 
